@@ -17,7 +17,7 @@ const Version = "v0.0.1-alpha"
 var dg *discordgo.Session
 var TOKEN string
 var GUILDID string
-var days = 3
+var days = 1
 
 type gun struct {
 	chambers []bool
@@ -50,19 +50,19 @@ func init() {
 	}
 }
 
-func init() {
-
-}
-
 var (
 	commands = []*discordgo.ApplicationCommand{
 		{
+			Name:        "check",
+			Description: "Checks if revolver is loaded",
+		},
+		{
 			Name:        "load",
-			Description: "Reloads discord roulette",
+			Description: "Reloads revolver",
 		},
 		{
 			Name:        "spin",
-			Description: "Spins the barrels",
+			Description: "Spins the six chambers",
 		},
 		{
 			Name:        "shoot",
@@ -71,6 +71,22 @@ var (
 	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+		"check": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			var content string
+
+			if revolver.loaded {
+				content = "Revolver Loaded"
+			} else {
+				content = "Revolver Empty"
+			}
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: fmt.Sprintf(content),
+				},
+			})
+		},
 		"load": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			var content string
 
@@ -84,12 +100,29 @@ var (
 				},
 			})
 		},
+		"safe": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			var content string
+
+			revolver.safe()
+			content = "*Clink!*"
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: fmt.Sprintf(content),
+				},
+			})
+		},
 		"spin": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			var content string
 
+			log.Println("Pre-spin")
+			log.Println(revolver.chambers)
 			spun := revolver.spin()
 
 			if spun {
+				log.Println("spun")
+				log.Println(revolver.chambers)
 				content = "*brrrrrrrrrr. Click*"
 			} else {
 				content = "You have to load the revolver first silly. We dont dry spin around here."
@@ -105,15 +138,24 @@ var (
 		"shoot": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			var content string
 			var mem = i.Member
+			nick := mem.Nick
+			if nick == "" {
+				nick = mem.User.Username
+			}
 
+			log.Println("Pre-shoot")
+			log.Println(revolver.chambers)
 			fired := revolver.shoot()
+			log.Println(fired)
+			log.Println("Post-shoot")
+			log.Println(revolver.chambers)
 
 			if fired {
-				content = fmt.Sprintf("BANG! \nGuess it wasn't %s's lucky day", mem.Nick)
+				content = fmt.Sprintf("BANG! \nGuess it wasn't %s's lucky day", nick)
 				reason := content
 				err := s.GuildBanCreateWithReason(i.GuildID, mem.User.ID, reason, days)
 				if err != nil {
-					log.Printf("Failed to bann player. error: %s", err)
+					log.Printf("Failed to ban player. error: %s", err)
 				}
 
 			} else {
@@ -187,8 +229,12 @@ func (g *gun) shoot() bool {
 			g.loaded = false
 			g.chambers[0] = false
 			return true
+		} else {
+			newChambers := append(g.chambers[1:], false)
+			g.chambers = newChambers
+			return false
 		}
-		return false
+
 	} else {
 		return false
 	}
@@ -210,4 +256,9 @@ func (g *gun) spin() bool {
 func (g *gun) load() {
 	g.chambers = []bool{true, false, false, false, false, false}
 	g.loaded = true
+}
+
+func (g *gun) safe() {
+	g.chambers = []bool{false, false, false, false, false, false}
+	g.loaded = false
 }
