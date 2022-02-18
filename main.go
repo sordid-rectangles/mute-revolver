@@ -74,6 +74,23 @@ var (
 		"check": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			var content string
 
+			check, err := comesFromDM(s, i)
+			if check {
+				log.Println("Message in dm")
+
+				content = "I can only be used in servers ;-("
+
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf(content),
+					},
+				})
+			}
+			if err != nil {
+				log.Printf("Error checking if interaction is DM: %s \n", err)
+			}
+
 			if revolver.loaded {
 				content = "Revolver Loaded"
 			} else {
@@ -90,6 +107,23 @@ var (
 		"load": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			var content string
 
+			check, err := comesFromDM(s, i)
+			if check {
+				log.Println("Message in dm")
+
+				content = "I can only be used in servers ;-("
+
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf(content),
+					},
+				})
+			}
+			if err != nil {
+				log.Printf("Error checking if interaction is DM: %s \n", err)
+			}
+
 			revolver.load()
 			content = "*Click!*"
 
@@ -103,6 +137,23 @@ var (
 		"safe": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			var content string
 
+			check, err := comesFromDM(s, i)
+			if check {
+				log.Println("Message in dm")
+
+				content = "I can only be used in servers ;-("
+
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf(content),
+					},
+				})
+			}
+			if err != nil {
+				log.Printf("Error checking if interaction is DM: %s \n", err)
+			}
+
 			revolver.safe()
 			content = "*Clink!*"
 
@@ -115,6 +166,23 @@ var (
 		},
 		"spin": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			var content string
+
+			check, err := comesFromDM(s, i)
+			if check {
+				log.Println("Message in dm")
+
+				content = "I can only be used in servers ;-("
+
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf(content),
+					},
+				})
+			}
+			if err != nil {
+				log.Printf("Error checking if interaction is DM: %s \n", err)
+			}
 
 			log.Println("Pre-spin")
 			log.Println(revolver.chambers)
@@ -137,8 +205,27 @@ var (
 		},
 		"shoot": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			var content string
+			check, err := comesFromDM(s, i)
+			if check {
+				log.Println("Message in dm")
+
+				content = "I can only be used in servers ;-("
+
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: fmt.Sprintf(content),
+					},
+				})
+			}
+			if err != nil {
+				log.Printf("Error checking if interaction is DM: %s \n", err)
+			}
+
 			var mem = i.Member
+
 			nick := mem.Nick
+
 			if nick == "" {
 				nick = mem.User.Username
 			}
@@ -261,4 +348,15 @@ func (g *gun) load() {
 func (g *gun) safe() {
 	g.chambers = []bool{false, false, false, false, false, false}
 	g.loaded = false
+}
+
+func comesFromDM(s *discordgo.Session, i *discordgo.InteractionCreate) (bool, error) {
+	channel, err := s.State.Channel(i.ChannelID)
+	if err != nil {
+		if channel, err = s.Channel(i.ChannelID); err != nil {
+			return false, err
+		}
+	}
+
+	return channel.Type == discordgo.ChannelTypeDM, nil
 }
