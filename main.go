@@ -3,13 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+	db "github.com/sordid-rectangles/dev-tools-bot/revolver"
 )
 
 const Version = "v0.0.1-alpha"
@@ -25,7 +24,7 @@ type gun struct {
 	bans     int
 }
 
-var revolver = gun{chambers: []bool{false, false, false, false, false, false}, loaded: false, bans: 0}
+//var revolver = gun{chambers: []bool{false, false, false, false, false, false}, loaded: false, bans: 0}
 
 func init() {
 	// Print out a fancy logo!
@@ -91,9 +90,17 @@ var (
 				log.Printf("Error checking if interaction is DM: %s \n", err)
 			}
 
-			if revolver.loaded {
-				content = "Revolver Loaded"
+			var guild = i.GuildID
+
+			rev, exists := db.Memstore[guild]
+			if exists {
+				if rev.Loaded {
+					content = "Revolver Loaded"
+				} else {
+					content = "Revolver Empty"
+				}
 			} else {
+				db.Memstore[guild] = &db.Gun{GuildID: guild, Chambers: []bool{false, false, false, false, false, false}, Loaded: false, Bans: 0}
 				content = "Revolver Empty"
 			}
 
@@ -124,8 +131,17 @@ var (
 				log.Printf("Error checking if interaction is DM: %s \n", err)
 			}
 
-			revolver.load()
-			content = "*Click!*"
+			var guild = i.GuildID
+
+			rev, exists := db.Memstore[guild]
+			if exists {
+				rev.Load()
+				content = "*Click!*"
+
+			} else {
+				db.Memstore[guild] = &db.Gun{GuildID: guild, Chambers: []bool{true, false, false, false, false, false}, Loaded: true, Bans: 0}
+				content = "*Click!*"
+			}
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -154,8 +170,17 @@ var (
 				log.Printf("Error checking if interaction is DM: %s \n", err)
 			}
 
-			revolver.safe()
-			content = "*Clink!*"
+			var guild = i.GuildID
+
+			rev, exists := db.Memstore[guild]
+			if exists {
+				rev.Safe()
+				content = "*Clink!*"
+
+			} else {
+				db.Memstore[guild] = &db.Gun{GuildID: guild, Chambers: []bool{false, false, false, false, false, false}, Loaded: true, Bans: 0}
+				content = "*Clink!*"
+			}
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -184,13 +209,24 @@ var (
 				log.Printf("Error checking if interaction is DM: %s \n", err)
 			}
 
-			log.Println("Pre-spin")
-			log.Println(revolver.chambers)
-			spun := revolver.spin()
+			var guild = i.GuildID
+
+			rev, exists := db.Memstore[guild]
+
+			var spun = false
+			if exists {
+				log.Println("Pre-spin")
+				log.Println(rev.Chambers)
+				spun = rev.Spin()
+
+			} else {
+				db.Memstore[guild] = &db.Gun{GuildID: guild, Chambers: []bool{true, false, false, false, false, false}, Loaded: true, Bans: 0}
+				spun = false
+			}
 
 			if spun {
 				log.Println("spun")
-				log.Println(revolver.chambers)
+				log.Println(rev.Chambers)
 				content = "*brrrrrrrrrr. Click*"
 			} else {
 				content = "You have to load the revolver first silly. We dont dry spin around here."
@@ -230,12 +266,23 @@ var (
 				nick = mem.User.Username
 			}
 
-			log.Println("Pre-shoot")
-			log.Println(revolver.chambers)
-			fired := revolver.shoot()
-			log.Println(fired)
-			log.Println("Post-shoot")
-			log.Println(revolver.chambers)
+			var guild = i.GuildID
+
+			rev, exists := db.Memstore[guild]
+
+			var fired = false
+			if exists {
+				log.Println("Pre-shoot")
+				log.Println(rev.Chambers)
+				fired := rev.Shoot()
+				log.Println(fired)
+				log.Println("Post-shoot")
+				log.Println(rev.Chambers)
+
+			} else {
+				db.Memstore[guild] = &db.Gun{GuildID: guild, Chambers: []bool{true, false, false, false, false, false}, Loaded: true, Bans: 0}
+				fired = false
+			}
 
 			if fired {
 				content = fmt.Sprintf("BANG! \nGuess it wasn't %s's lucky day", nick)
@@ -248,6 +295,7 @@ var (
 			} else {
 				content = "CLICK! Lucky devil"
 			}
+
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -308,46 +356,6 @@ func main() {
 
 	// Exit Normally.
 	//exit
-}
-
-func (g *gun) shoot() bool {
-	if g.loaded {
-		if g.chambers[0] {
-			g.loaded = false
-			g.chambers[0] = false
-			return true
-		} else {
-			newChambers := append(g.chambers[1:], false)
-			g.chambers = newChambers
-			return false
-		}
-
-	} else {
-		return false
-	}
-}
-
-func (g *gun) spin() bool {
-	if g.loaded {
-		g.chambers = []bool{false, false, false, false, false, false}
-		rand.Seed(time.Now().UnixNano())
-		l := len(g.chambers)
-		i := rand.Intn(l)
-		g.chambers[i] = true
-		return true
-	} else {
-		return false
-	}
-}
-
-func (g *gun) load() {
-	g.chambers = []bool{true, false, false, false, false, false}
-	g.loaded = true
-}
-
-func (g *gun) safe() {
-	g.chambers = []bool{false, false, false, false, false, false}
-	g.loaded = false
 }
 
 func comesFromDM(s *discordgo.Session, i *discordgo.InteractionCreate) (bool, error) {
