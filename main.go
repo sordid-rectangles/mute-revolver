@@ -60,6 +60,10 @@ var (
 			Description: "Reloads revolver",
 		},
 		{
+			Name:        "safe",
+			Description: "Unloads revolver",
+		},
+		{
 			Name:        "spin",
 			Description: "Spins the six chambers",
 		},
