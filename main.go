@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
@@ -57,7 +58,7 @@ var (
 		},
 		{
 			Name:        "load",
-			Description: "Reloads revolver",
+			Description: "Loads 1 revolver chamber",
 		},
 		{
 			Name:        "safe",
@@ -278,7 +279,7 @@ var (
 			if exists {
 				log.Println("Pre-shoot")
 				log.Println(rev.Chambers)
-				fired := rev.Shoot()
+				fired = rev.Shoot()
 				log.Println(fired)
 				log.Println("Post-shoot")
 				log.Println(rev.Chambers)
@@ -290,10 +291,12 @@ var (
 
 			if fired {
 				content = fmt.Sprintf("BANG! \nGuess it wasn't %s's lucky day", nick)
-				reason := content
-				err := s.GuildBanCreateWithReason(i.GuildID, mem.User.ID, reason, days)
+				// reason := content
+				// err := s.GuildBanCreateWithReason(i.GuildID, mem.User.ID, reason, days)
+				t := time.Now().Add(time.Hour * 2)
+				err := s.GuildMemberTimeout(i.GuildID, mem.User.ID, &t)
 				if err != nil {
-					log.Printf("Failed to ban player. error: %s", err)
+					log.Printf("Failed to timeout player. error: %s\nDuration of timeout: %v", err, time.Until(t).Hours())
 				}
 
 			} else {
